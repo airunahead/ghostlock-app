@@ -14,6 +14,8 @@ GhostLock 利用 CVE-2026-43499 在支持的 Android 内核上获取临时 root�
 
 如果启用了 Shizuku，请先通过 ADB 启动，再运行 GhostLock。点击 GhostLock 的状态卡授权。
 
+任何自带 `libksud.so` 的 root 管理器都可提供 `ksud` 用于加载模块。内置列表（KernelSU、ReSukiSU、BakaSU、KowSU）会自动检测；其他管理器可在 **设置 → 根管理器** 中手动选择。缺 `ksud` 时 W1/W2 仍可拿到 uid 0，但不会加载模块。
+
 ## 添加内核 profile
 
 无需重新打包 App 即可导入 profile：
@@ -33,11 +35,11 @@ GhostLock 利用 CVE-2026-43499 在支持的 Android 内核上获取临时 root�
 
 需要 Android NDK、`make`、Gradle 和 ADB。通过 adb shell 运行时会跳过 App 的 seccomp 绕过阶段。
 
-```powershell
+```sh
 make -C src ghostlock
-./gradlew.bat exportKernelProfiles
+./gradlew exportKernelProfiles
 adb push build/native/ghostlock /data/local/tmp/ghostlock
-adb push build/kernel-profiles/<release>.bin /data/local/tmp/profile.bin
+adb push "build/kernel-profiles/<release>.bin" /data/local/tmp/profile.bin
 adb shell chmod 755 /data/local/tmp/ghostlock
 adb shell /data/local/tmp/ghostlock --load-prebuilt-profile /data/local/tmp/profile.bin
 ```
@@ -49,12 +51,10 @@ adb shell /data/local/tmp/ghostlock --load-prebuilt-profile /data/local/tmp/prof
 
 需要 Rust。提取器支持 boot 镜像、完整 OTA ZIP 或 HTTP(S) 链接。
 
-```powershell
-Push-Location tools/extract_rs
-cargo build --release
-Pop-Location
-build/extract/release/ghostlock-extract.exe boot.img --xbl-config xbl_config.img --format conf --out profile.conf
-build/extract/release/ghostlock-extract.exe OTA.zip --format conf --out profile.conf
+```sh
+(cd tools/extract_rs && cargo build --release)
+build/extract/release/ghostlock-extract boot.img --xbl-config xbl_config.img --format conf --out profile.conf
+build/extract/release/ghostlock-extract OTA.zip --format conf --out profile.conf
 ```
 
 在 App 中导入 `profile.conf`。没有 `xbl_config.img` 时省略 `--xbl-config`。若 `remove_waiter()` 已修复，提取器会以退出码 `6` 拒绝该内核。
